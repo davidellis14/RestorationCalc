@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restoration Job Calculator</title>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.8.0/umd/Recharts.js"></script>
+    <style>
+        /* Add custom styles here */
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 16px;
+            padding: 16px;
+        }
+        input {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+        }
+        button {
+            background-color: #4f46e5;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4338ca;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #4f46e5;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .tab-active {
+            border-bottom: 2px solid #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app"></div>
+
+    <script type="text/babel">
+        const pricingData = [
+          { category: "Appliances", item: "Dryer Disconnect", unit: "EA", baseRate: 23.14, afterHoursRate: 23.14, notes: "Detach only" },
+          { category: "Appliances", item: "Washer Disconnect", unit: "EA", baseRate: 30.01, afterHoursRate: 30.01, notes: "Detach only" },
+          { category: "Cleaning", item: "Anti-microbial Treatment", unit: "SF", baseRate: 0.42, afterHoursRate: 0.42, notes: "Surface treatment" },
+          { category: "Cleaning", item: "Equipment Decontamination", unit: "EA", baseRate: 36.34, afterHoursRate: 36.34, notes: "Per piece of equipment" },
+          { category: "Cleaning", item: "Floor Cleaning - Heavy", unit: "SF", baseRate: 1.1, afterHoursRate: 1.1, notes: "Deep cleaning rate" },
+          { category: "Demolition", item: "Baseboard Removal - Cat 3", unit: "LF", baseRate: 1.07, afterHoursRate: 1.07, notes: "Including disposal" },
+          { category: "Demolition", item: "Ceiling Tile Removal", unit: "SF", baseRate: 0.47, afterHoursRate: 0.47, notes: "Including disposal" },
+          { category: "Demolition", item: "Drywall Removal - Cat 3", unit: "SF", baseRate: 1.56, afterHoursRate: 1.56, notes: "Including disposal" },
+          { category: "Demolition", item: "Insulation Removal - Cat 3", unit: "SF", baseRate: 1.14, afterHoursRate: 1.14, notes: "Including disposal" },
+          { category: "Demolition", item: "Paneling Removal - Cat 3", unit: "SF", baseRate: 0.98, afterHoursRate: 0.98, notes: "Including disposal" },
+          { category: "Demolition", item: "Vinyl Flooring Removal - Cat 3", unit: "SF", baseRate: 2.29, afterHoursRate: 2.29, notes: "Including disposal" },
+          { category: "Disposal", item: "30 Yard Dumpster", unit: "EA", baseRate: 695, afterHoursRate: 695, notes: "5-7 tons capacity" },
+          { category: "Equipment", item: "Air Mover", unit: "Day", baseRate: 25.61, afterHoursRate: 25.61, notes: "Price per 24-hour period" },
+          { category: "Equipment", item: "Dehumidifier (110-159 ppd)", unit: "Day", baseRate: 117.3, afterHoursRate: 117.3, notes: "Price per 24-hour period" },
+          { category: "Equipment", item: "HEPA Filter", unit: "EA", baseRate: 217.67, afterHoursRate: 217.67, notes: "For negative air machines", hidden: true },
+          { category: "Equipment", item: "Negative Air Fan/Scrubber", unit: "Day", baseRate: 80.38, afterHoursRate: 80.38, notes: "Price per 24-hour period" },
+          { category: "Labor", item: "Content Manipulation", unit: "HR", baseRate: 51.75, afterHoursRate: 77.63, notes: "For moving and handling contents" },
+          { category: "Labor", item: "Equipment Setup & Monitoring", unit: "HR", baseRate: 60.01, afterHoursRate: 90.11, notes: "Includes delivery setup inspection monitoring and removal" },
+          { category: "PPE", item: "Heavy Duty Gloves", unit: "Pair", baseRate: 6.84, afterHoursRate: 6.84, notes: "Per pair" },
+          { category: "PPE", item: "Heavy Duty PPE", unit: "EA", baseRate: 39.81, afterHoursRate: 39.81, notes: "Per person" },
+          { category: "Water Extraction", item: "Hard Surface - Cat 3", unit: "SF", baseRate: 0.81, afterHoursRate: 1.3, notes: "Category 3 water extraction" }
+        ];
+
+        function App() {
+            const [useAfterHours, setUseAfterHours] = React.useState(false);
+            const [quantities, setQuantities] = React.useState({});
+            const [days, setDays] = React.useState({});
+            const [squareFootage, setSquareFootage] = React.useState({});
+            const [totalCost, setTotalCost] = React.useState(0);
+            const [lineItems, setLineItems] = React.useState([]);
+            const [activeTab, setActiveTab] = React.useState("calculator");
+            const [jobName, setJobName] = React.useState("");
+            const [jobDate, setJobDate] = React.useState("");
+            const [jobAddress, setJobAddress] = React.useState("");
+            const [customerName, setCustomerName] = React.useState("");
+
+            const categories = [...new Set(pricingData.map(item => item.category))];
+
+            React.useEffect(() => {
+                calculateTotal();
+            }, [quantities, days, squareFootage, useAfterHours]);
+
+            const calculateTotal = () => {
+                let total = 0;
+                let items = [];
+                
+                // Get the number of scrubbers
+                const scrubberItem = pricingData.find(item => item.item === "Negative Air Fan/Scrubber");
+                const scrubberQuantity = quantities[scrubberItem?.item] || 0;
+                
+                // Get the HEPA filter item
+                const hepaFilterItem = pricingData.find(item => item.item === "HEPA Filter");
+                
+                pricingData.forEach(item => {
+                  // Skip hidden items from direct calculation
+                  if (item.hidden) return;
+                  
+                  const quantity = quantities[item.item] || 0;
+                  const dayCount = days[item.item] || 1;
+                  const sqft = squareFootage[item.item] || 0;
+                  
+                  let lineTotal = 0;
+                  let lineQuantity = quantity;
+                  
+                  if (item.unit === "SF" || item.unit === "LF") {
+                    lineQuantity = sqft;
+                  }
+                  
+                  const rate = useAfterHours ? item.afterHoursRate : item.baseRate;
+                  
+                  if (item.unit === "Day") {
+                    lineTotal = quantity * rate * dayCount;
+                  } else {
+                    lineTotal = lineQuantity * rate;
+                  }
+                  
+                  if (lineTotal > 0) {
+                    items.push({
+                      item: item.item,
+                      category: item.category,
+                      quantity: lineQuantity,
+                      unit: item.unit,
+                      rate: rate,
+                      days: item.unit === "Day" ? dayCount : null,
+                      total: lineTotal
+                    });
+                    total += lineTotal;
+                  }
+                });
+                
+                // Automatically add HEPA filters for each scrubber
+                if (scrubberQuantity > 0 && hepaFilterItem) {
+                  const hepaRate = useAfterHours ? hepaFilterItem.afterHoursRate : hepaFilterItem.baseRate;
+                  const hepaTotal = scrubberQuantity * hepaRate;
+                  
+                  items.push({
+                    item: "HEPA Filter (Auto-added)",
+                    category: "Equipment",
+                    quantity: scrubberQuantity,
+                    unit: "EA",
+                    rate: hepaRate,
+                    days: null,
+                    total: hepaTotal,
+                    note: "One per Negative Air Fan/Scrubber"
+                  });
+                  
+                  total += hepaTotal;
+                }
+                
+                setLineItems(items);
+                setTotalCost(total);
+            };
+
+            const handleQuantityChange = (item, value) => {
+                const newValue = value === "" ? 0 : parseInt(value, 10) || 0;
+                setQuantities({...quantities, [item]: newValue});
+            };
+
+            const handleDaysChange = (item, value) => {
+                const newValue = value === "" ? 1 : parseInt(value, 10) || 1;
+                setDays({...days, [item]: newValue});
+            };
+
+            const handleSqftChange = (item, value) => {
+                const newValue = value === "" ? 0 : parseInt(value, 10) || 0;
+                setSquareFootage({...squareFootage, [item]: newValue});
+            };
+
+            const resetForm = () => {
+                setQuantities({});
+                setDays({});
+                setSquareFootage({});
+                setJobName("");
+                setJobDate("");
+                setJobAddress("");
+                setCustomerName("");
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto p-4">
+                    <h1 className="text-2xl font-bold mb-6">Restoration Job Cost Calculator</h1>
+                    
+                    <div className="mb-6">
+                        <div className="flex space-x-4 border-b">
+                            <button 
+                                className={`px-4 py-2 ${activeTab === "calculator" ? "tab-active" : ""}`}
+                                onClick={() => setActiveTab("calculator")}
+                            >
+                                Calculator
+                            </button>
+                            <button 
+                                className={`px-4 py-2 ${activeTab === "estimate" ? "tab-active" : ""}`}
+                                onClick={() => setActiveTab("estimate")}
+                            >
+                                Estimate
+                            </button>
+                            <button 
+                                className={`px-4 py-2 ${activeTab === "settings" ? "tab-active" : ""}`}
+                                onClick={() => setActiveTab("settings")}
+                            >
+                                Settings
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {activeTab === "calculator" && (
+                        <div>
+                            <div className="card">
+                                <div className="flex items-center mb-4">
+                                    <span className="mr-2 font-medium">After Hours Rates:</span>
+                                    <label className="toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={useAfterHours}
+                                            onChange={() => setUseAfterHours(!useAfterHours)}
+                                        />
+                                        <span className="slider"></span>
+                                    </label>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Job Name</label>
+                                        <input
+                                            type="text"
+                                            value={jobName}
+                                            onChange={(e) => setJobName(e.target.value)}
+                                            className="w-full"
+                                            placeholder="Enter job name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Date</label>
+                                        <input
+                                            type="date"
+                                            value={jobDate}
+                                            onChange={(e) => setJobDate(e.target.value)}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Customer Name</label>
+                                        <input
+                                            type="text"
+                                            value={customerName}
+                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            className="w-full"
+                                            placeholder="Enter customer name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Job Address</label>
+                                        <input
+                                            type="text"
+                                            value={jobAddress}
+                                            onChange={(e) => setJobAddress(e.target.value)}
+                                            className="w-full"
+                                            placeholder="Enter job address"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {categories.map(category => (
+                                <div key={category} className="card">
+                                    <h2 className="text-lg font-semibold mb-4">{category}</h2>
+                                    <div className="overflow-x-auto">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th>Unit</th>
+                                                    <th>Rate</th>
+                                                    <th>Quantity</th>
+                                                    {category === "Equipment" && <th>Days</th>}
+                                                    <th>Notes</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pricingData.filter(item => item.category === category && !item.hidden).map((item, index) => (
+                                                    <tr key={index}>
+                                                        <td>{item.item}</td>
+                                                        <td>{item.unit}</td>
+                                                        <td>
+                                                            ${useAfterHours ? item.afterHoursRate.toFixed(2) : item.baseRate.toFixed(2)}
+                                                        </td>
+                                                        <td>
+                                                            {item.unit === "SF" || item.unit === "LF" ? (
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={squareFootage[item.item] || ""}
+                                                                    onChange={(e) => handleSqftChange(item.item, e.target.value)}
+                                                                    className="w-24"
+                                                                    placeholder="Sq. Ft."
+                                                                />
+                                                            ) : (
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={quantities[item.item] || ""}
+                                                                    onChange={(e) => handleQuantityChange(item.item, e.target.value)}
+                                                                    className="w-24"
+                                                                />
+                                                            )}
+                                                        </td>
+                                                        {category === "Equipment" && (
+                                                            <td>
+                                                                {item.unit === "Day" && (
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        value={days[item.item] || ""}
+                                                                        onChange={(e) => handleDaysChange(item.item, e.target.value)}
+                                                                        className="w-24"
+                                                                    />
+                                                                )}
+                                                            </td>
+                                                        )}
+                                                        <td>
+                                                            {item.item === "Negative Air Fan/Scrubber" ? (
+                                                                <span>{item.notes} <strong>(Includes one HEPA filter per unit)</strong></span>
+                                                            ) : (
+                                                                item.notes
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ))}
+                            
+                            <div className="sticky bottom-0 bg-white p-4 border-t shadow-md flex justify-between items-center">
+                                <button 
+                                    onClick={resetForm} 
+                                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                                >
+                                    Reset Form
+                                </button>
+                                <div className="text-xl font-bold">
+                                    Total: ${totalCost.toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activeTab === "estimate" && (
+                        <div className="card">
+                            <h2 className="text-xl font-bold mb-4">Job Estimate</h2>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <p className="font-semibold">Job: {jobName}</p>
+                                    <p>Date: {jobDate}</p>
+                                </div>
+                                <div>
+                                    <p className="font-semibold">Customer: {customerName}</p>
+                                    <p>Address: {jobAddress}</p>
+                                </div>
+                            </div>
+                            
+                            {lineItems.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Category</th>
+                                                <th>Item</th>
+                                                <th>Quantity</th>
+                                                <th>Unit</th>
+                                                <th>Rate</th>
+                                                {lineItems.some(item => item.days) && <th>Days</th>}
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {lineItems.map((item, index) => (
+                                                <tr key={index}>
+                                                    <td>{item.category}</td>
+                                                    <td>
+                                                        {item.item}
+                                                        {item.note && <div className="text-xs text-gray-500">{item.note}</div>}
+                                                    </td>
+                                                    <td>{item.quantity}</td>
+                                                    <td>{item.unit}</td>
+                                                    <td>${item.rate.toFixed(2)}</td>
+                                                    {lineItems.some(item => item.days) && <td>{item.days}</td>}
+                                                    <td>${item.total.toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td colSpan={lineItems.some(item => item.days) ? 6 : 5} className="text-right font-bold">Total:</td>
+                                                <td className="font-bold">${totalCost.toFixed(2)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 italic">No items added to estimate yet.</p>
+                            )}
+                            
+                            <div className="mt-6">
+                                <button 
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                    disabled={lineItems.length === 0}
+                                    onClick={() => window.print()}
+                                >
+                                    Print Estimate
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activeTab === "settings" && (
+                        <div className="card">
+                            <h2 className="text-xl font-bold mb-4">Settings</h2>
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="font-semibold mb-2">Company Information</h3>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Company Name</label>
+                                            <input type="text" className="w-full" placeholder="Your Company Name" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Phone</label>
+                                            <input type="text" className="w-full" placeholder="Phone Number" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Email</label>
+                                            <input type="email" className="w-full" placeholder="Email Address" />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 className="font-semibold mb-2">Tax Settings</h3>
+                                    <div className="flex items-center mb-4">
+                                        <span className="mr-2 font-medium">Apply Tax:</span>
+                                        <label className="toggle-switch">
+                                            <input type="checkbox" />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Tax Rate (%)</label>
+                                        <input type="number" min="0" max="100" step="0.01" className="w-32" placeholder="0.00" />
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-6">
+                                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('app'));
+    </script>
+
+    <!-- Progressive Web App support -->
+    <script>
+        // Register service worker for offline capability
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }).catch(error => {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+            });
+        }
+
+        // Add to home screen functionality
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+    </script>
+</body>
+</html>
